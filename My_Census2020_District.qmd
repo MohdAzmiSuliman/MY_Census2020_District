@@ -1,0 +1,901 @@
+---
+title: "Malaysia Census 2020 by Administrative District"
+date: last-modified
+date-format: "dddd, DD/MM/YYYY"
+format: 
+  html:
+    theme: flatly
+    code-fold: true
+    code-copy: hover
+    code-overflow: wrap
+    code-tools: true
+    df-print: paged
+    default-image-extension: svg
+    embed-resources: true
+    page-layout: full
+    reference-location: margin
+    title-block-banner: true
+    title-block-style: default
+    fontsize: .9em
+    monofont: 'Fira Code'
+execute: 
+  echo: true
+  warning: true
+number-sections: true
+toc: true
+fig-dpi: 320
+dpi: 320
+---
+
+# Library
+
+```{r}
+#| label: setup
+
+options(scipen = 999)
+
+pacman::p_load(tidyverse, readxl, janitor)
+
+# Default parameter mapping
+param_type1 <- list(
+  "17" = "Pop_GenderTotal", "18" = "Pop_GenderMale", "19" = "Pop_GenderFemale",
+  "27" = "Pop_CitizenshipCitizen", "28" = "Pop_CitizenshipNon-citizen",
+  "34" = "AnnualPopGrowthRate_Average",
+  "38" = "Pop_EthnicMalay", "39" = "Pop_EthnicOtherBumi", "40" = "Pop_EthnicChinese",
+  "41" = "Pop_EthnicIndian", "42" = "Pop_EthnicOther",
+  "53" = "Pop_AgeGroup0014", "55" = "Pop_AgeGroup1564", "57" = "Pop_AgeGroup65++",
+  "86" = "Pop_MaritalNeverMarried", "87" = "Pop_MaritalMarried",
+  "88" = "Pop_MaritalWiddowed", "89" = "Pop_MaritalDivorcedSeparated",
+  "98" = "Pop_ReligionIslam", "99" = "Pop_ReligionChristian", 
+  "100" = "Pop_ReligionBuddha", "101" = "Pop_ReligionHindu", 
+  "102" = "Pop_ReligionOthers", "103" = "Pop_ReligionNoReligionUnknown",
+  "113" = "LandAreaKm2", "115" = "Pop_Density",
+  "118" = "Pop_StrataUrban", "119" = "Pop_StrataRural"
+)
+
+param_type2 <- list(
+  "17" = "Pop_GenderTotal", "18" = "Pop_GenderMale", "19" = "Pop_GenderFemale",
+  "27" = "Pop_CitizenshipCitizen", "28" = "Pop_CitizenshipNon-citizen",
+  "34" = "AnnualPopGrowthRate_Average",
+  "38" = "Pop_EthnicMalay", "39" = "Pop_EthnicOtherBumi", "40" = "Pop_EthnicChinese",
+  "41" = "Pop_EthnicIndian", "42" = "Pop_EthnicOther",
+  "53" = "Pop_AgeGroup0014", "55" = "Pop_AgeGroup1564", "57" = "Pop_AgeGroup65++",
+  "84" = "Pop_MaritalNeverMarried", "85" = "Pop_MaritalMarried",
+  "86" = "Pop_MaritalWiddowed", "87" = "Pop_MaritalDivorcedSeparated",
+  "96" = "Pop_ReligionIslam", "97" = "Pop_ReligionChristian", 
+  "98" = "Pop_ReligionBuddha", "99" = "Pop_ReligionHindu", 
+  "100" = "Pop_ReligionOthers", "101" = "Pop_ReligionNoReligionUnknown",
+  "111" = "LandAreaKm2", "113" = "Pop_Density",
+  "116" = "Pop_StrataUrban", "117" = "Pop_StrataRural"
+)
+
+param_type3 <- list(
+  "17" = "Pop_GenderTotal", "18" = "Pop_GenderMale", "19" = "Pop_GenderFemale",
+  "27" = "Pop_CitizenshipCitizen", "28" = "Pop_CitizenshipNon-citizen",
+  "34" = "AnnualPopGrowthRate_Average",
+  "38" = "Pop_EthnicMalay", "39" = "Pop_EthnicOtherBumi", "40" = "Pop_EthnicChinese",
+  "41" = "Pop_EthnicIndian", "42" = "Pop_EthnicOther",
+  "53" = "Pop_AgeGroup0014", "55" = "Pop_AgeGroup1564", "57" = "Pop_AgeGroup65++",
+  "85" = "Pop_MaritalNeverMarried", "86" = "Pop_MaritalMarried",
+  "87" = "Pop_MaritalWiddowed", "88" = "Pop_MaritalDivorcedSeparated",
+  "97" = "Pop_ReligionIslam", "98" = "Pop_ReligionChristian", 
+  "99" = "Pop_ReligionBuddha", "100" = "Pop_ReligionHindu", 
+  "101" = "Pop_ReligionOthers", "102" = "Pop_ReligionNoReligionUnknown",
+  "112" = "LandAreaKm2", "114" = "Pop_Density",
+  "117" = "Pop_StrataUrban", "118" = "Pop_StrataRural"
+)
+
+extract_dpinfo <- function(file, 
+                           sheet = "3. DP", 
+                           range = "A4:G150", 
+                           param_map = param_type1) {
+  # Ensure file exists
+  if (!file.exists(file)) stop("Error: File does not exist - ", file)
+
+  # Extract state & district info from file path
+  path_parts <- str_split(file, "/")[[1]]
+  state_info <- path_parts[length(path_parts) - 2]
+  district_info <- path_parts[length(path_parts) - 1]
+
+  # Extract state & district codes and names
+  state_code <- as.integer(str_extract(state_info, "^\\d{2}"))
+  state_name <- str_remove(state_info, "^\\d{2} ")
+  district_code <- as.integer(str_sub(str_extract(district_info, 
+                                                  "^\\d{4}"), 3, 4))
+  district_name <- str_remove(district_info, "^\\d{4} ")
+  ngdp_code <- sprintf("%02d%02d", state_code, district_code)
+
+  # Read Excel file
+  df <- tryCatch(
+    read_excel(file, sheet = sheet, range = range, 
+               col_names = TRUE, col_types = "text") %>%
+      clean_names() %>%
+      mutate(across(where(is.character), str_trim)),
+    error = function(e) stop("Error: Unable to read sheet '", sheet, 
+                             "' in file - ", file)
+  )
+
+  # Rename columns: Replace "x" with "census_"
+  colnames(df) <- str_replace_all(names(df), "^x(\\d+)$", "census_\\1")
+
+  # Add metadata columns
+  df <- df %>%
+    mutate(
+      state_code = state_code,
+      state_name = state_name,
+      district_code = district_code,
+      district_name = district_name,
+      ngdp_code = ngdp_code,
+      parameter = map_chr(row_number(), 
+                          ~param_map[[as.character(.x)]] %||% NA_character_)
+    ) %>%
+    relocate(all_of(c("state_code", "state_name", "district_code", 
+                      "district_name", "ngdp_code", "parameter"))) %>%
+    filter(!is.na(parameter))
+
+  # Initialize or retrieve list_dpinfo
+  list_dpinfo <- if (exists("list_dpinfo", 
+                            envir = .GlobalEnv)) get("list_dpinfo", 
+                                                     envir = .GlobalEnv) else list()
+
+  # Update state entry
+  list_dpinfo[[state_name]] <- list_dpinfo[[state_name]] %||% list(state_code = state_code)
+
+  # Update district entry
+  list_dpinfo[[state_name]][[district_name]] <- list(
+    district_code = district_code,
+    ngdp_code = ngdp_code,
+    censusdata = df
+  )
+
+  # Save updated list_dpinfo
+  assign("list_dpinfo", list_dpinfo, envir = .GlobalEnv)
+
+  message("✅ Extracted data stored in: list_dpinfo$", state_name, "$",  
+          district_name, "$censusdata")
+}
+
+```
+
+
+# Raw Data
+
+## 01 Johor
+
+```{r}
+extract_dpinfo(
+  file = "../01 Johor/0101 Batu Pahat/DP BATU PAHAT JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../01 Johor/0102 Johor Bahru/DP JOHOR BAHRU JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../01 Johor/0103 Kluang/DP Kluang Jadual 1 hingga 12.xlsx")
+
+extract_dpinfo(
+  file = "../01 Johor/0104 Kota Tinggi/DP Kota Tinggi JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../01 Johor/0105 Mersing/DP Mersing Jadual 1 hingga 12.xlsx")
+
+extract_dpinfo(
+  file = "../01 Johor/0106 Muar/DP Muar Jadual 1 hingga 12.xlsx")
+
+extract_dpinfo(
+  file = "../01 Johor/0107 Pontian/DP Pontian Jadual 1 hingga 12.xlsx") 
+
+extract_dpinfo(
+  file = "../01 Johor/0108 Segamat/DP Segamat Jadual 1 hingga 12.xlsx")
+
+extract_dpinfo(
+  file = "../01 Johor/0109 Kulai/DP Kulai Jadual 1 hingga 12.xlsx")
+
+extract_dpinfo(
+  file = "../01 Johor/0110 Tangkak/DP Tangkak Jadual 1 hingga 12.xlsx")
+```
+
+```{r}
+list_dpinfo$Johor$Tangkak$censusdata
+```
+
+## 02 Kedah
+
+```{r}
+extract_dpinfo(
+  file = "../02 Kedah/0201 Baling/DP Baling Jadual 1 hingga 12.xlsx", 
+  param_map = param_type2)
+
+extract_dpinfo(
+  file = "../02 Kedah/0202 Bandar Baharu/DP Bandar Baharu Jadual 1 hingga 12.xlsx", 
+  param_map = param_type2)
+
+extract_dpinfo(
+  file = "../02 Kedah/0203 Kota Setar/DP Kota Setar Jadual 1 hingga 12.xlsx", 
+  param_map = param_type2)
+
+extract_dpinfo(
+  file = "../02 Kedah/0204 Kuala Muda/DP Kuala Muda Jadual 1 hingga 12.xlsx", 
+  param_map = param_type2)
+
+extract_dpinfo(
+  file = "../02 Kedah/0205 Kubang Pasu/DP Kubang Pasu Jadual 1 hingga 12.xlsx")
+
+extract_dpinfo(
+  file = "../02 Kedah/0206 Kulim/DP Kulim Jadual 1 hingga 12.xlsx", 
+  param_map = param_type2)
+
+extract_dpinfo(
+  file = "../02 Kedah/0207 Langkawi/DP Langkawi Jadual 1 hingga 12.xlsx")
+
+extract_dpinfo(
+  file = "../02 Kedah/0208 Padang Terap/DP Padang Terap Jadual 1 hingga 12.xlsx")
+
+extract_dpinfo(
+  file = "../02 Kedah/0209 Sik/DP Sik Jadual 1 hingga 12.xlsx")
+
+extract_dpinfo(
+  file = "../02 Kedah/0210 Yan/DP Yan Jadual 1 hingga 12.xlsx")
+
+extract_dpinfo(
+  file = "../02 Kedah/0211 Pendang/DP Pendang Jadual 1 hingga 12.xlsx")
+
+extract_dpinfo(
+  file = "../02 Kedah/0212 Pokok Sena/DP Pokok Sena Jadual 1 hingga 12.xlsx")
+
+```
+
+
+```{r}
+list_dpinfo$Kedah$`Pokok Sena`$censusdata
+```
+
+
+## 03 Kelantan
+
+```{r}
+extract_dpinfo(
+  file = "../03 Kelantan/0301 Bachok/DP Bachok Jadual 1 hingga 12.xlsx", 
+  param_map = param_type2)
+
+extract_dpinfo(
+  file = "../03 Kelantan/0302 Kota Bharu/DP Kota Bharu Jadual 1 hingga 12.xlsx", 
+  sheet = "3.DP", 
+  param_map = param_type2)
+
+extract_dpinfo(
+  file = "../03 Kelantan/0303 Machang/DP Machang JADUAL 1 HINGGA 12.xlsx", 
+  sheet = "3.DP", 
+  param_map = param_type2)
+
+extract_dpinfo(
+  file = "../03 Kelantan/0304 Pasir Mas/DP Pasir Mas Jadual 1 hingga 12.xlsx", 
+  sheet = "3.DP", 
+  param_map = param_type2)
+
+extract_dpinfo(
+  file = "../03 Kelantan/0305 Pasir Puteh/DP Pasir Puteh JADUAL 1 HINGGA12.xlsx", 
+  sheet = "3.DP", 
+  param_map = param_type2)
+
+extract_dpinfo(
+  file = "../03 Kelantan/0306 Tanah Merah/DP Tanah Merah Jadual 1 hingga 12.xlsx", 
+  param_map = param_type2)
+
+extract_dpinfo(
+  file = "../03 Kelantan/0307 Tumpat/DP Tumpat Jadual 1 hingga 12.xlsx", 
+  sheet = "3.DP", 
+  param_map = param_type2)
+
+
+extract_dpinfo(
+  file = "../03 Kelantan/0308 Gua Musang/DP Gua Musang Jadual 1 hingga 12.xlsx", 
+  sheet = "3.DP", 
+  param_map = param_type2)
+
+extract_dpinfo(
+  file = "../03 Kelantan/0309 Kuala Krai/DP Kuala Krai Jadual 1 hingga 12.xlsx", 
+  sheet = "3.DP", 
+  param_map = param_type2)
+
+extract_dpinfo(
+  file = "../03 Kelantan/0310 Jeli/DP Jeli Jadual 1 hingga 12.xlsx", 
+  sheet = "3.DP", 
+  param_map = param_type2)
+
+extract_dpinfo(
+  file = "../03 Kelantan/0311 Kecil Lojing/DP Kecil Lojing Jadual 1 hingga 12.xlsx", 
+  sheet = "3.DP", 
+  param_map = param_type2)
+
+```
+
+
+```{r}
+list_dpinfo$Kelantan$`Kecil Lojing`
+```
+
+## 04 Melaka
+
+```{r}
+extract_dpinfo(
+  file = "../04 Melaka/0401 Alor Gajah/Manual_Copy_PDF.xlsx")
+
+extract_dpinfo(
+  file = "../04 Melaka/0402 Jasin/DP Jasin Jadual 1 hingga 12.xlsx")
+
+extract_dpinfo(
+  file = "../04 Melaka/0403 Melaka Tengah/DP Melaka Tengah Jadual 1 hingga 12.xlsx")
+
+```
+
+
+```{r}
+list_dpinfo$Melaka$`Alor Gajah`
+```
+
+## 05 Negeri Sembilan
+
+```{r}
+extract_dpinfo(
+  file = "../05 Negeri Sembilan/0501 Jelebu/DP Jelebu Jadual 1 hingaa 12.xlsx")
+
+extract_dpinfo(
+  file = "../05 Negeri Sembilan/0502 Kuala Pilah/DP Kuala Pilah Jadual 1 hingga 12.xlsx")
+
+extract_dpinfo(
+  file = "../05 Negeri Sembilan/0503 Port Dickson/DP Port Dickson Jadual 1 hingga 12.xlsx")
+
+extract_dpinfo(
+  file = "../05 Negeri Sembilan/0504 Rembau/DP Rembau Jadual 1 hingga 12.xlsx")
+
+extract_dpinfo(
+  file = "../05 Negeri Sembilan/0505 Seremban/DP Seremban Jadual 1 hingga 12.xlsx")
+
+extract_dpinfo(
+  file = "../05 Negeri Sembilan/0506 Tampin/DP Tampin Jadual 1 hingga 12.xlsx")
+
+extract_dpinfo(
+  file = "../05 Negeri Sembilan/0507 Jempol/DP Jempol Jadual 1 hingga 12.xlsx")
+
+```
+
+
+```{r}
+list_dpinfo$`Negeri Sembilan`$Jempol
+```
+
+## 06 Pahang
+
+```{r}
+extract_dpinfo(
+  file = "../06 Pahang/0601 Bentong/DP Bentong JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../06 Pahang/0602 Cameron Highlands/DP Cameron Highlands JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../06 Pahang/0603 Jerantut/DP Jerantut JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../06 Pahang/0604 Kuantan/DP Kuantan JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../06 Pahang/0605 Lipis/DP Lipis JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../06 Pahang/0606 Pekan/DP Pekan JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../06 Pahang/0607 Raub/DP Raub JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../06 Pahang/0608 Temerloh/DP Temerloh JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../06 Pahang/0609 Rompin/DP Rompin JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../06 Pahang/0610 Maran/DP Maran JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../06 Pahang/0611 Bera/DP Bera JADUAL 1 HINGGA 12.xlsx")
+
+```
+
+
+```{r}
+list_dpinfo$Pahang$Bera
+```
+
+## 07 Pulau Pinang
+
+```{r}
+extract_dpinfo(
+  file = "../07 Pulau Pinang/0701 Seberang Perai Tengah/DP Seberang Perai Tengah JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../07 Pulau Pinang/0702 Seberang Perai Utara/DP Seberang Perai Utara JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../07 Pulau Pinang/0703 Seberang Perai Selatan/DP Seberang Perai Selatan JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../07 Pulau Pinang/0704 Timur Laut/DP Timur Laut JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../07 Pulau Pinang/0705 Barat Daya/DP Barat Daya JADUAL 1 HINGGA 12.xlsx")
+
+```
+
+
+```{r}
+list_dpinfo$`Pulau Pinang`$`Barat Daya`
+```
+
+## 08 Perak
+
+```{r}
+extract_dpinfo(
+  file = "../08 Perak/0801 Batang Padang/DP Batang Padang JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../08 Perak/0802 Manjung/DP Manjung JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../08 Perak/0803 Kinta/DP Kinta JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../08 Perak/0804 Kerian/DP Kerian JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../08 Perak/0805 Kuala Kangsar/DP Kuala Kangsar JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../08 Perak/0806 Larut Dan Matang/DP Larut Dan Matang_ JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../08 Perak/0807 Hilir Perak/DP Hilir Perak JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../08 Perak/0808 Hulu Perak/DP Hulu Perak JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../08 Perak/0809 Perak Tengah/DP Perak Tengah JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../08 Perak/0810 Kampar/DP Kampar JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../08 Perak/0811 Muallim/DP MuallimJADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../08 Perak/0812 Bagan Datuk/DP Bagan Datuk JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../08 Perak/0813 Selama/DP Selama JADUAL 1 HINGGA 12.xlsx")
+
+```
+
+
+```{r}
+list_dpinfo$Perak$Selama
+```
+
+## 09 Perlis
+
+```{r}
+extract_dpinfo("../09 Perlis/0901 Perlis/PERLIS JADUAL 1 HINGGA 16.xlsx", 
+               sheet = "2. Perlis", 
+               param_map = param_type3)
+```
+
+```{r}
+list_dpinfo$Perlis$Perlis
+```
+
+## 10 Selangor
+
+```{r}
+extract_dpinfo(
+  file = "../10 Selangor/1001 Gombak/DP GOMBAK JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../10 Selangor/1002 Klang/DP KLANG JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../10 Selangor/1003 Kuala Langat/DP Kuala Langat JAUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../10 Selangor/1004 Kuala Selangor/DP KUALA SELANGOR JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../10 Selangor/1005 Petaling/DP PETALING JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../10 Selangor/1006 Sabak Bernam/DP SABAK BERNAM JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../10 Selangor/1007 Sepang/DP SEPANG JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../10 Selangor/1008 Ulu Langat/DP ULU LANGAT JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../10 Selangor/1009 Ulu Selangor/DP ULU SELANGOR JADUAL 1 HINGGA 12.xlsx")
+
+```
+
+
+```{r}
+list_dpinfo$Selangor$`Ulu Selangor`
+```
+
+## 11 Terengganu
+
+```{r}
+extract_dpinfo(
+  file = "../11 Terengganu/1101 Besut/DP BESUT JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../11 Terengganu/1102 Dungun/DP DUNGUN JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../11 Terengganu/1103 Kemaman/DP KEMAMAN JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../11 Terengganu/1104 Kuala Terengganu/DP KUALA TERENGGANU JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../11 Terengganu/1105 Marang/DP MARANG JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../11 Terengganu/1106 Hulu Terengganu/DP HULU TERENGGANU JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../11 Terengganu/1107 Setiu/DP SETIU JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../11 Terengganu/1108 Kuala Nerus/DP KUALA NERUS JADUAL 1 HINGGA 12.xlsx")
+
+```
+
+
+```{r}
+list_dpinfo$Terengganu$`Kuala Nerus`
+```
+
+## 12 Sabah
+
+```{r}
+extract_dpinfo(
+  file = "../12 Sabah/1201 Tawau/DP TAWAU JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../12 Sabah/1202 Lahad Datu/DP LAHAD DATU JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../12 Sabah/1203 Semporna/DP SEMPORNA JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../12 Sabah/1204 Sandakan/DP SANDAKAN JADUAL 1 HINGGA 12.xlsx", 
+  param_map = param_type2)
+
+extract_dpinfo(
+  file = "../12 Sabah/1205 Kinabatangan/DP KINABATANGAN JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../12 Sabah/1206 Beluran/DP BELURAN JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../12 Sabah/1207 Kota Kinabalu/DP KOTA KINABALU JADUAL 1 HINGGA 12.xlsx", 
+  param_map = param_type2)
+
+extract_dpinfo(
+  file = "../12 Sabah/1208 Ranau/DP RANAU JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../12 Sabah/1209 Kota Belud/DP KOTA BELUD JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../12 Sabah/1210 Tuaran/DP TUARAN JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../12 Sabah/1211 Penampang/DP PENAMPANG JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../12 Sabah/1212 Papar/DP PAPAR JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../12 Sabah/1213 Kudat/DP KUDAT JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../12 Sabah/1214 Kota Marudu/DP KOTA MARUDU JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../12 Sabah/1215 Pitas/DP PITAS JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../12 Sabah/1216 Beaufort/DP BEAUFORT JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../12 Sabah/1217 Kuala Penyu/DP KUALA PENYU JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../12 Sabah/1218 Sipitang/DP SIPITANG JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../12 Sabah/1219 Tenom/DP TENOM JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../12 Sabah/1220 Nabawan/DP NABAWAN JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../12 Sabah/1221 Keningau/DP KENINGAU JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../12 Sabah/1222 Tambunan/DP TAMBUNAN JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../12 Sabah/1223 Kunak/DP KUNAK JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../12 Sabah/1224 Tongod/DP TONGOD JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../12 Sabah/1225 Putatan/DP PUTATAN JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../12 Sabah/1226 Telupid/DP TELUPID JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../12 Sabah/1227 Kalabakan/DP KALABAKAN JADUAL 1 HINGGA 12.xlsx")
+
+```
+
+```{r}
+list_dpinfo$Sabah$Kalabakan
+```
+
+## 13 Sarawak
+
+```{r}
+extract_dpinfo(
+  file = "../13 Sarawak/1301 Kuching/DP KUCHING JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1302 Bau/DP BAU JADAUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1303 Lundu/DP LUNDU JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1304 Samarahan/DP SAMAHAN JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1305 Serian/DP SERIAN JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1306 Simunjan/DP SIMUNJAN JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1307 Sri Aman/DP SRI AMAN JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1308 Lubok Antu/DP LUBOK ANTU JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1309 Betong/DP BETONG JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1310 Saratok/DP SARATOK JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1311 Sarikei/DP SARIKEI JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1312 Maradong/DP MARADONG JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1313 Daro/DP DARO JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1314 Julau/DP JULAU JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1315 Sibu/DP SIBU JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1316 Dalat/DP DALAT JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1317 Mukah/DP MUKAH JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1318 Kanowit/DP KANOWIT JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1319 Bintulu/DP BINTULU JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1320 Tatau/DP TATAU JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1321 Kapit/DP KAPIT JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1322 Song/DP SONG JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1323 Belaga/DP BELAGA JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1324 Miri/DP MIRI JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1325 Marudi/DP MARUDI JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1326 Limbang/DP LIMBANG JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1327 Lawas/DP LAWAS JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1328 Matu/DP MATU JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1329 Asajaya/DP ASAJAYA JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1330 Pakan/DP PAKAN JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1331 Selangau/DP SELANGAU JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1332 Tebedu/DP TEBEDU JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1333 Pusa/DP PUSA JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1334 Kabong/DP KABONG JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1335 Tanjung Manis/DP TANJUNG MANIS JADUAL 1 HINGGA 12.xlsx", 
+  param_map = param_type3)
+
+extract_dpinfo(
+  file = "../13 Sarawak/1336 Sebauh/DP SEBAUH JADUAL 1 HINGGA 12.xlsx", 
+  param_map = param_type3)
+
+extract_dpinfo(
+  file = "../13 Sarawak/1337 Bukit Mabong/DP BUKIT MABONG JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1338 Subis/DP SUBIS JADUAL 1 HINGGA 12.xlsx")
+
+extract_dpinfo(
+  file = "../13 Sarawak/1339 Beluru/DP BELURU JADUAL 1 HINGGA 12.xlsx", 
+  param_map = param_type3)
+
+extract_dpinfo(
+  file = "../13 Sarawak/1340 Telang Usan/DP TELANG USAN JADUAL 1 HINGGA 12.xlsx")
+
+```
+
+```{r}
+list_dpinfo$Sarawak$`Telang Usan`
+```
+
+## 14 WP Kuala Lumpur
+
+```{r}
+extract_dpinfo("../14 WP Kuala Lumpur/1401 WP Kuala Lumpur/W.P. KUALA LUMPUR JADUAL 1 HINGGA 16.xlsx", 
+               sheet = "2. W.P. Kuala Lumpur", 
+               param_map = param_type3)
+```
+
+```{r}
+list_dpinfo$`WP Kuala Lumpur`$`WP Kuala Lumpur`
+```
+
+
+## 15 WP Labuan
+
+```{r}
+extract_dpinfo("../15 WP Labuan/1501 WP Labuan/W.P. LABUAN JADUAL 1 HINGGA 16.xlsx", 
+               sheet = "2. W.P. Labuan", 
+               param_map = param_type3)
+```
+
+```{r}
+list_dpinfo$`WP Labuan`$`WP Labuan`
+```
+
+
+## 16 WP Putrajaya
+
+```{r}
+extract_dpinfo("../16 WP Putrajaya/1601 WP Putrajaya/W.P. PUTRAJAYA JADUAL 1 HINGGA 16.xlsx", 
+               sheet = "2. W.P. Putrajaya", 
+               param_map = param_type3)
+```
+
+```{r}
+list_dpinfo$`WP Putrajaya`$`WP Putrajaya`
+```
+
+
+## All
+
+```{r}
+tibble(state_name = names(list_dpinfo),
+       state_code = map_int(list_dpinfo, ~ .x$state_code),
+       districts = map(list_dpinfo, 
+                       ~ names(.x[setdiff(names(.x), "state_code")]))) %>% 
+  unnest_longer(districts) %>% 
+  mutate(district_code = map2_int(state_name, 
+                                  districts, 
+                                  ~ list_dpinfo[[.x]][[.y]]$district_code)) %>% 
+  select(state_code, state_name, district_code, district_name = districts)
+```
+
+```{r}
+mycensus_district_yearwide <- map_dfr(names(list_dpinfo), function(state) {
+  map_dfr(names(list_dpinfo[[state]][setdiff(names(list_dpinfo[[state]]), "state_code")]), function(district) {
+    list_dpinfo[[state]][[district]]$censusdata %>%
+      mutate(state_name = state, district_name = district)
+  })
+}) %>%
+  select(-census_1)
+
+mycensus_district_yearwide
+
+#write.csv(mycensus_district_yearwide, "mycensus_district_yearwide.csv")
+```
+
+
+# Wrangle
+
+```{r}
+mycensus_district_yearlong <- mycensus_district_yearwide %>% 
+  pivot_longer(cols = starts_with("census_"), 
+               names_to = "census_year", 
+               values_to = "value") %>%
+  mutate(census_year = str_remove(census_year, "census_"), 
+         census_year = as.integer(census_year)) %>% 
+  pivot_wider(names_from = parameter, values_from = value) %>% 
+  mutate(across(.cols = c(Pop_GenderTotal:`Pop_CitizenshipNon-citizen`, 
+                          Pop_EthnicMalay:Pop_ReligionNoReligionUnknown, 
+                          Pop_StrataUrban, Pop_StrataRural), 
+                .fns = ~ as.integer(.)), 
+         across(.cols = c(AnnualPopGrowthRate_Average, LandAreaKm2, 
+                          Pop_Density), 
+                .fns = ~ as.numeric(.))) %>% 
+  rename(Pop_Total = Pop_GenderTotal)
+
+mycensus_district_yearlong
+
+#write.csv(mycensus_district_yearlong, "mycensus_district_yearlong.csv")
+```
+
+# Misc
+
+```{r}
+mycensus_district_yearlong %>% 
+  group_by(state_code, state_name, census_year) %>% 
+  summarise(total_pop = sum(Pop_Total, na.rm = T), 
+            .groups = "drop")
+
+mycensus_district_yearlong %>% 
+  group_by(census_year) %>% 
+  summarise(total_pop = sum(Pop_Total, na.rm = T), 
+            .groups = "drop")
+
+mycensus_district_yearlong %>% 
+  group_by(census_year) %>% 
+  summarise(Pop_GenderMale = sum(Pop_GenderMale, na.rm = T), 
+            .groups = "drop")
+```
+
