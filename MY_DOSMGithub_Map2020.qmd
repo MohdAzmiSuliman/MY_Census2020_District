@@ -1,0 +1,167 @@
+---
+title: "MY Map - State & District"
+date: last-modiffied
+date-format: "dddd, DD/MM/YYYY"
+format: 
+  html:
+    theme: flatly
+    code-fold: show
+    code-copy: hover
+    code-overflow: wrap
+    code-tools: true
+    df-print: paged
+    embed-resources: true
+    page-layout: full
+    reference-location: margin
+    title-block-banner: true
+    title-block-style: default
+    fontsize: .9em
+    monofont: 'Fira Code'
+execute: 
+  echo: true
+  warning: true
+number-sections: true
+toc: true
+fig-dpi: 320
+dpi: 320
+---
+
+# Setup
+
+```{r}
+#| label: setup
+
+pacman::p_load(tidyverse, janitor, sf, spdep, lwgeom)
+```
+
+# State Map
+
+## Download
+
+```{r}
+#| label: download geojson state
+#| eval: false
+
+download.file(url = str_c("https://github.com/dosm-malaysia/data-open/", 
+                          "raw/main/datasets/geodata/", 
+                          "administrative_1_state.geojson"), 
+              destfile = "250314_administrative_1_state.geojson", 
+              mode = "wb", 
+              method = "curl")
+# last download: 14/03/2025
+
+my_admstate0 <- st_read("250314_administrative_1_state.geojson") %>% 
+  arrange(code_state)
+```
+
+
+```{r}
+my_admstate0 <- st_read("250314_administrative_1_state.geojson") %>% 
+  arrange(code_state)
+```
+
+## Correct Invalid Geom
+
+```{r}
+my_admstate0 %>% 
+  filter(!st_is_valid(geometry))
+
+my_admstate <- my_admstate0 %>% 
+  mutate(geometry = lwgeom_make_valid(geometry))
+
+my_admstate
+
+my_admstate %>% 
+  filter(!st_is_valid(geometry))
+```
+
+## Export
+
+```{r}
+# st_write(my_admstate, "250314_my_admstate.geojson", delete_dsn = TRUE)
+```
+
+## Plot
+
+```{r}
+my_admstate %>% 
+  ggplot() +
+  geom_sf(fill = "lightblue", color = "black") +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+
+
+
+# District Map
+
+## Download
+
+```{r}
+#| label: download geojson district
+#| eval: false
+
+download.file(url = str_c("https://github.com/dosm-malaysia/data-open/", 
+                          "raw/main/datasets/geodata/", 
+                          "administrative_2_district.geojson"), 
+              destfile = "250314_administrative_2_district.geojson", 
+              mode = "wb", 
+              method = "curl")
+# last download: 03/02/2025
+
+my_admdistrict0 <- st_read("250314_administrative_2_district.geojson") %>% 
+  arrange(code_state, code_district)
+```
+
+
+```{r}
+my_admdistrict0 <- st_read("250314_administrative_2_district.geojson") %>% 
+  arrange(code_state, code_district)
+```
+
+## Correct Invalide Geometry
+
+```{r}
+my_admdistrict0 %>% 
+  filter(!st_is_valid(geometry))
+
+my_admdistrict <- my_admdistrict0 %>% 
+  mutate(geometry = lwgeom_make_valid(geometry)) %>% 
+  st_make_valid()
+
+my_admdistrict
+
+my_admdistrict %>% 
+  filter(!st_is_valid(geometry))
+```
+
+
+## Export
+
+```{r}
+# st_write(my_admdistrict, "250314_my_admdistrict.geojson", delete_dsn = TRUE)
+```
+
+
+## Plot
+
+```{r}
+my_admdistrict %>% 
+  ggplot() +
+  geom_sf(fill = "lightblue", color = "black") +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+
+
+## Misc
+
+```{r}
+my_admdistrict %>% 
+  filter(code_state_district == "13_24") %>% 
+  ggplot() +
+  geom_sf(fill = "lightblue", color = "black") +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+
