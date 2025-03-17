@@ -110,3 +110,17 @@ mycensus_district00_yearlong_land
 #write_rds(mycensus_district00_yearlong_land, "censuslong_ngdp00.rds")
 ```
 
+# Check
+
+```{r}
+mycensus_district_yearlong %>% 
+  group_by(census_year) %>% 
+  summarise(Pop_Total = sum(Pop_Total, na.rm = TRUE), 
+            .groups = "drop")
+
+mycensus_district00_yearlong_land %>% 
+  group_by(census_year) %>% 
+  summarise(Pop_Total = sum(Pop_Total, na.rm = TRUE), 
+            .groups = "drop")
+```
+
