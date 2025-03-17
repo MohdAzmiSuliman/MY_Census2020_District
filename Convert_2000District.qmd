@@ -1,0 +1,112 @@
+---
+title: "Merge Census 2020 District to Census 2000 DP"
+date: last-modified
+date-format: "dddd, DD/MM/YYYY"
+format: 
+  html:
+    theme: flatly
+    code-fold: true
+    code-copy: hover
+    code-overflow: wrap
+    code-tools: true
+    df-print: paged
+    default-image-extension: svg
+    embed-resources: true
+    page-layout: full
+    reference-location: margin
+    title-block-banner: true
+    title-block-style: default
+    fontsize: .9em
+    monofont: 'Fira Code'
+execute: 
+  echo: true
+  warning: true
+number-sections: true
+toc: true
+fig-dpi: 320
+dpi: 320
+---
+
+# Setup
+
+```{r}
+#| label: setup
+
+options(scipen = 999)
+
+pacman::p_load(tidyverse, readxl, janitor)
+
+mycensus_district_yearlong <- read_rds("mycensus_district_yearlong.rds")
+mycensus_district_yearwide <- read_rds("mycensus_district_yearwide.rds")
+```
+
+# Convert based on Census 2000 DP
+
+```{r}
+ngdp00_match <- tribble(~ngdp, ~ngdp00, 
+                        "0109", "0102", "0110", "0106", "0212", "0203", 
+                        "0311", "0308", "0810", "0803", "0811", "0801", 
+                        "0812", "0807", "0813", "0806", "1108", "1104", 
+                        "1225", "1211", "1226", "1206", "1227", "1201", 
+                        "1330", "1314", "1331", "1317", "1332", "1305", 
+                        "1333", "1309", "1334", "1310", "1335", "1313", 
+                        "1336", "1319", "1337", "1321", "1338", "1324", 
+                        "1339", "1325", "1340", "1325")
+## check with dp conversion by dosm
+
+ngdp00_match
+```
+
+
+```{r}
+mycensus_district00_yearlong <- mycensus_district_yearlong %>% 
+  filter(census_year >= 1991) %>% 
+  full_join(., 
+            ngdp00_match, 
+            by = join_by(ngdp_code == ngdp)) %>% 
+  relocate(ngdp00, .after = ngdp_code) %>% 
+  mutate(ngdp00 = case_when(is.na(ngdp00) ~ ngdp_code, 
+                            .default = ngdp00)) %>% 
+  group_by(ngdp00, census_year) %>% 
+  summarise(across(where(is.numeric), 
+                   ~ sum(.x, na.rm = TRUE)), 
+            .groups = "drop") %>% 
+  mutate(across(where(is.numeric), ~ na_if(.x, 0))) %>% 
+  select(-c(state_code, district_code, 
+            AnnualPopGrowthRate_Average, LandAreaKm2, Pop_Density))
+
+mycensus_district00_yearlong
+```
+
+
+```{r}
+ngdp00_landarea <- mycensus_district_yearlong %>% 
+  filter(census_year == 2020) %>% 
+  select(ngdp_code, LandAreaKm2) %>% 
+  left_join(., 
+            ngdp00_match, 
+            by = join_by(ngdp_code == ngdp)) %>% 
+  mutate(ngdp00 = case_when(is.na(ngdp00) ~ ngdp_code, 
+                            .default = ngdp00)) %>% 
+  group_by(ngdp00) %>% 
+  summarise(LandAreaKm2 = sum(LandAreaKm2, na.rm = TRUE), 
+            .groups = "drop")
+
+ngdp00_landarea
+```
+
+```{r}
+mycensus_district00_yearlong_land <- mycensus_district00_yearlong %>% 
+  left_join(., 
+            ngdp00_landarea, 
+            by = join_by(ngdp00)) %>% 
+  mutate(Pop_Density = round(Pop_Total / LandAreaKm2, 3))
+
+mycensus_district00_yearlong_land
+```
+
+```{r}
+#write_csv(mycensus_district00_yearlong_land, "censuslong_ngdp00.csv")
+#write_rds(mycensus_district00_yearlong_land, "censuslong_ngdp00.rds")
+```
+

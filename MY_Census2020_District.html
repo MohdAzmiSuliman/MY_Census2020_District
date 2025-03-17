@@ -4365,7 +4365,7 @@ window.onload = function() {
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">Friday, 14/03/2025</p>
+        <p class="date">Monday, 17/03/2025</p>
       </div>
     </div>
     
@@ -6767,7 +6767,8 @@ $censusdata
 </div>
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb354"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb354-1"><a href="#cb354-1" aria-hidden="true" tabindex="-1"></a><span class="co">#write.csv(mycensus_district_yearwide, &quot;mycensus_district_yearwide.csv&quot;)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb354"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb354-1"><a href="#cb354-1" aria-hidden="true" tabindex="-1"></a><span class="co">#write_csv(mycensus_district_yearwide, &quot;mycensus_district_yearwide.csv&quot;)</span></span>
+<span id="cb354-2"><a href="#cb354-2" aria-hidden="true" tabindex="-1"></a><span class="co">#write_rds(mycensus_district_yearwide, &quot;mycensus_district_yearwide.rds&quot;)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 </section>
@@ -6814,7 +6815,8 @@ Caused by warning:
 </div>
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb358"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb358-1"><a href="#cb358-1" aria-hidden="true" tabindex="-1"></a><span class="co">#write.csv(mycensus_district_yearlong, &quot;mycensus_district_yearlong.csv&quot;)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb358"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb358-1"><a href="#cb358-1" aria-hidden="true" tabindex="-1"></a><span class="co">#write_csv(mycensus_district_yearlong, &quot;mycensus_district_yearlong.csv&quot;)</span></span>
+<span id="cb358-2"><a href="#cb358-2" aria-hidden="true" tabindex="-1"></a><span class="co">#write_rds(mycensus_district_yearlong, &quot;mycensus_district_yearlong.rds&quot;)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 </section>
@@ -8195,52 +8197,54 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <span id="cb362-922"><a href="#cb362-922" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb362-923"><a href="#cb362-923" aria-hidden="true" tabindex="-1"></a>mycensus_district_yearwide</span>
 <span id="cb362-924"><a href="#cb362-924" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb362-925"><a href="#cb362-925" aria-hidden="true" tabindex="-1"></a><span class="co">#write.csv(mycensus_district_yearwide, &quot;mycensus_district_yearwide.csv&quot;)</span></span>
-<span id="cb362-926"><a href="#cb362-926" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb362-927"><a href="#cb362-927" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb362-925"><a href="#cb362-925" aria-hidden="true" tabindex="-1"></a><span class="co">#write_csv(mycensus_district_yearwide, &quot;mycensus_district_yearwide.csv&quot;)</span></span>
+<span id="cb362-926"><a href="#cb362-926" aria-hidden="true" tabindex="-1"></a><span class="co">#write_rds(mycensus_district_yearwide, &quot;mycensus_district_yearwide.rds&quot;)</span></span>
+<span id="cb362-927"><a href="#cb362-927" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb362-928"><a href="#cb362-928" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb362-929"><a href="#cb362-929" aria-hidden="true" tabindex="-1"></a><span class="fu"># Wrangle</span></span>
-<span id="cb362-930"><a href="#cb362-930" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb362-933"><a href="#cb362-933" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb362-934"><a href="#cb362-934" aria-hidden="true" tabindex="-1"></a>mycensus_district_yearlong <span class="ot">&lt;-</span> mycensus_district_yearwide <span class="sc">%&gt;%</span> </span>
-<span id="cb362-935"><a href="#cb362-935" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="at">cols =</span> <span class="fu">starts_with</span>(<span class="st">&quot;census_&quot;</span>), </span>
-<span id="cb362-936"><a href="#cb362-936" aria-hidden="true" tabindex="-1"></a>               <span class="at">names_to =</span> <span class="st">&quot;census_year&quot;</span>, </span>
-<span id="cb362-937"><a href="#cb362-937" aria-hidden="true" tabindex="-1"></a>               <span class="at">values_to =</span> <span class="st">&quot;value&quot;</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb362-938"><a href="#cb362-938" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">census_year =</span> <span class="fu">str_remove</span>(census_year, <span class="st">&quot;census_&quot;</span>), </span>
-<span id="cb362-939"><a href="#cb362-939" aria-hidden="true" tabindex="-1"></a>         <span class="at">census_year =</span> <span class="fu">as.integer</span>(census_year)) <span class="sc">%&gt;%</span> </span>
-<span id="cb362-940"><a href="#cb362-940" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> parameter, <span class="at">values_from =</span> value) <span class="sc">%&gt;%</span> </span>
-<span id="cb362-941"><a href="#cb362-941" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="at">.cols =</span> <span class="fu">c</span>(Pop_GenderTotal<span class="sc">:</span><span class="st">`</span><span class="at">Pop_CitizenshipNon-citizen</span><span class="st">`</span>, </span>
-<span id="cb362-942"><a href="#cb362-942" aria-hidden="true" tabindex="-1"></a>                          Pop_EthnicMalay<span class="sc">:</span>Pop_ReligionNoReligionUnknown, </span>
-<span id="cb362-943"><a href="#cb362-943" aria-hidden="true" tabindex="-1"></a>                          Pop_StrataUrban, Pop_StrataRural), </span>
-<span id="cb362-944"><a href="#cb362-944" aria-hidden="true" tabindex="-1"></a>                <span class="at">.fns =</span> <span class="sc">~</span> <span class="fu">as.integer</span>(.)), </span>
-<span id="cb362-945"><a href="#cb362-945" aria-hidden="true" tabindex="-1"></a>         <span class="fu">across</span>(<span class="at">.cols =</span> <span class="fu">c</span>(AnnualPopGrowthRate_Average, LandAreaKm2, </span>
-<span id="cb362-946"><a href="#cb362-946" aria-hidden="true" tabindex="-1"></a>                          Pop_Density), </span>
-<span id="cb362-947"><a href="#cb362-947" aria-hidden="true" tabindex="-1"></a>                <span class="at">.fns =</span> <span class="sc">~</span> <span class="fu">as.numeric</span>(.))) <span class="sc">%&gt;%</span> </span>
-<span id="cb362-948"><a href="#cb362-948" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">Pop_Total =</span> Pop_GenderTotal)</span>
-<span id="cb362-949"><a href="#cb362-949" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb362-950"><a href="#cb362-950" aria-hidden="true" tabindex="-1"></a>mycensus_district_yearlong</span>
-<span id="cb362-951"><a href="#cb362-951" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb362-952"><a href="#cb362-952" aria-hidden="true" tabindex="-1"></a><span class="co">#write.csv(mycensus_district_yearlong, &quot;mycensus_district_yearlong.csv&quot;)</span></span>
-<span id="cb362-953"><a href="#cb362-953" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb362-954"><a href="#cb362-954" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb362-955"><a href="#cb362-955" aria-hidden="true" tabindex="-1"></a><span class="fu"># Misc</span></span>
+<span id="cb362-929"><a href="#cb362-929" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb362-930"><a href="#cb362-930" aria-hidden="true" tabindex="-1"></a><span class="fu"># Wrangle</span></span>
+<span id="cb362-931"><a href="#cb362-931" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb362-934"><a href="#cb362-934" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb362-935"><a href="#cb362-935" aria-hidden="true" tabindex="-1"></a>mycensus_district_yearlong <span class="ot">&lt;-</span> mycensus_district_yearwide <span class="sc">%&gt;%</span> </span>
+<span id="cb362-936"><a href="#cb362-936" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="at">cols =</span> <span class="fu">starts_with</span>(<span class="st">&quot;census_&quot;</span>), </span>
+<span id="cb362-937"><a href="#cb362-937" aria-hidden="true" tabindex="-1"></a>               <span class="at">names_to =</span> <span class="st">&quot;census_year&quot;</span>, </span>
+<span id="cb362-938"><a href="#cb362-938" aria-hidden="true" tabindex="-1"></a>               <span class="at">values_to =</span> <span class="st">&quot;value&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb362-939"><a href="#cb362-939" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">census_year =</span> <span class="fu">str_remove</span>(census_year, <span class="st">&quot;census_&quot;</span>), </span>
+<span id="cb362-940"><a href="#cb362-940" aria-hidden="true" tabindex="-1"></a>         <span class="at">census_year =</span> <span class="fu">as.integer</span>(census_year)) <span class="sc">%&gt;%</span> </span>
+<span id="cb362-941"><a href="#cb362-941" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> parameter, <span class="at">values_from =</span> value) <span class="sc">%&gt;%</span> </span>
+<span id="cb362-942"><a href="#cb362-942" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="at">.cols =</span> <span class="fu">c</span>(Pop_GenderTotal<span class="sc">:</span><span class="st">`</span><span class="at">Pop_CitizenshipNon-citizen</span><span class="st">`</span>, </span>
+<span id="cb362-943"><a href="#cb362-943" aria-hidden="true" tabindex="-1"></a>                          Pop_EthnicMalay<span class="sc">:</span>Pop_ReligionNoReligionUnknown, </span>
+<span id="cb362-944"><a href="#cb362-944" aria-hidden="true" tabindex="-1"></a>                          Pop_StrataUrban, Pop_StrataRural), </span>
+<span id="cb362-945"><a href="#cb362-945" aria-hidden="true" tabindex="-1"></a>                <span class="at">.fns =</span> <span class="sc">~</span> <span class="fu">as.integer</span>(.)), </span>
+<span id="cb362-946"><a href="#cb362-946" aria-hidden="true" tabindex="-1"></a>         <span class="fu">across</span>(<span class="at">.cols =</span> <span class="fu">c</span>(AnnualPopGrowthRate_Average, LandAreaKm2, </span>
+<span id="cb362-947"><a href="#cb362-947" aria-hidden="true" tabindex="-1"></a>                          Pop_Density), </span>
+<span id="cb362-948"><a href="#cb362-948" aria-hidden="true" tabindex="-1"></a>                <span class="at">.fns =</span> <span class="sc">~</span> <span class="fu">as.numeric</span>(.))) <span class="sc">%&gt;%</span> </span>
+<span id="cb362-949"><a href="#cb362-949" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">Pop_Total =</span> Pop_GenderTotal)</span>
+<span id="cb362-950"><a href="#cb362-950" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb362-951"><a href="#cb362-951" aria-hidden="true" tabindex="-1"></a>mycensus_district_yearlong</span>
+<span id="cb362-952"><a href="#cb362-952" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb362-953"><a href="#cb362-953" aria-hidden="true" tabindex="-1"></a><span class="co">#write_csv(mycensus_district_yearlong, &quot;mycensus_district_yearlong.csv&quot;)</span></span>
+<span id="cb362-954"><a href="#cb362-954" aria-hidden="true" tabindex="-1"></a><span class="co">#write_rds(mycensus_district_yearlong, &quot;mycensus_district_yearlong.rds&quot;)</span></span>
+<span id="cb362-955"><a href="#cb362-955" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb362-956"><a href="#cb362-956" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb362-959"><a href="#cb362-959" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb362-960"><a href="#cb362-960" aria-hidden="true" tabindex="-1"></a>mycensus_district_yearlong <span class="sc">%&gt;%</span> </span>
-<span id="cb362-961"><a href="#cb362-961" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(state_code, state_name, census_year) <span class="sc">%&gt;%</span> </span>
-<span id="cb362-962"><a href="#cb362-962" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">total_pop =</span> <span class="fu">sum</span>(Pop_Total, <span class="at">na.rm =</span> T), </span>
-<span id="cb362-963"><a href="#cb362-963" aria-hidden="true" tabindex="-1"></a>            <span class="at">.groups =</span> <span class="st">&quot;drop&quot;</span>)</span>
-<span id="cb362-964"><a href="#cb362-964" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb362-965"><a href="#cb362-965" aria-hidden="true" tabindex="-1"></a>mycensus_district_yearlong <span class="sc">%&gt;%</span> </span>
-<span id="cb362-966"><a href="#cb362-966" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(census_year) <span class="sc">%&gt;%</span> </span>
-<span id="cb362-967"><a href="#cb362-967" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">total_pop =</span> <span class="fu">sum</span>(Pop_Total, <span class="at">na.rm =</span> T), </span>
-<span id="cb362-968"><a href="#cb362-968" aria-hidden="true" tabindex="-1"></a>            <span class="at">.groups =</span> <span class="st">&quot;drop&quot;</span>)</span>
-<span id="cb362-969"><a href="#cb362-969" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb362-970"><a href="#cb362-970" aria-hidden="true" tabindex="-1"></a>mycensus_district_yearlong <span class="sc">%&gt;%</span> </span>
-<span id="cb362-971"><a href="#cb362-971" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(census_year) <span class="sc">%&gt;%</span> </span>
-<span id="cb362-972"><a href="#cb362-972" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">Pop_GenderMale =</span> <span class="fu">sum</span>(Pop_GenderMale, <span class="at">na.rm =</span> T), </span>
-<span id="cb362-973"><a href="#cb362-973" aria-hidden="true" tabindex="-1"></a>            <span class="at">.groups =</span> <span class="st">&quot;drop&quot;</span>)</span>
-<span id="cb362-974"><a href="#cb362-974" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb362-957"><a href="#cb362-957" aria-hidden="true" tabindex="-1"></a><span class="fu"># Misc</span></span>
+<span id="cb362-958"><a href="#cb362-958" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb362-961"><a href="#cb362-961" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb362-962"><a href="#cb362-962" aria-hidden="true" tabindex="-1"></a>mycensus_district_yearlong <span class="sc">%&gt;%</span> </span>
+<span id="cb362-963"><a href="#cb362-963" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(state_code, state_name, census_year) <span class="sc">%&gt;%</span> </span>
+<span id="cb362-964"><a href="#cb362-964" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">total_pop =</span> <span class="fu">sum</span>(Pop_Total, <span class="at">na.rm =</span> T), </span>
+<span id="cb362-965"><a href="#cb362-965" aria-hidden="true" tabindex="-1"></a>            <span class="at">.groups =</span> <span class="st">&quot;drop&quot;</span>)</span>
+<span id="cb362-966"><a href="#cb362-966" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb362-967"><a href="#cb362-967" aria-hidden="true" tabindex="-1"></a>mycensus_district_yearlong <span class="sc">%&gt;%</span> </span>
+<span id="cb362-968"><a href="#cb362-968" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(census_year) <span class="sc">%&gt;%</span> </span>
+<span id="cb362-969"><a href="#cb362-969" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">total_pop =</span> <span class="fu">sum</span>(Pop_Total, <span class="at">na.rm =</span> T), </span>
+<span id="cb362-970"><a href="#cb362-970" aria-hidden="true" tabindex="-1"></a>            <span class="at">.groups =</span> <span class="st">&quot;drop&quot;</span>)</span>
+<span id="cb362-971"><a href="#cb362-971" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb362-972"><a href="#cb362-972" aria-hidden="true" tabindex="-1"></a>mycensus_district_yearlong <span class="sc">%&gt;%</span> </span>
+<span id="cb362-973"><a href="#cb362-973" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(census_year) <span class="sc">%&gt;%</span> </span>
+<span id="cb362-974"><a href="#cb362-974" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">Pop_GenderMale =</span> <span class="fu">sum</span>(Pop_GenderMale, <span class="at">na.rm =</span> T), </span>
+<span id="cb362-975"><a href="#cb362-975" aria-hidden="true" tabindex="-1"></a>            <span class="at">.groups =</span> <span class="st">&quot;drop&quot;</span>)</span>
+<span id="cb362-976"><a href="#cb362-976" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 </code><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal><i class="bi"></i></button></pre></div>
 </div></div></div></div></div>
 </div> <!-- /content -->

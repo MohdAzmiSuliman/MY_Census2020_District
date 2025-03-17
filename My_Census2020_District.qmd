@@ -852,7 +852,8 @@ mycensus_district_yearwide <- map_dfr(names(list_dpinfo), function(state) {
 
 mycensus_district_yearwide
 
-#write.csv(mycensus_district_yearwide, "mycensus_district_yearwide.csv")
+#write_csv(mycensus_district_yearwide, "mycensus_district_yearwide.csv")
+#write_rds(mycensus_district_yearwide, "mycensus_district_yearwide.rds")
 ```
 
 
@@ -877,7 +878,8 @@ mycensus_district_yearlong <- mycensus_district_yearwide %>%
 
 mycensus_district_yearlong
 
-#write.csv(mycensus_district_yearlong, "mycensus_district_yearlong.csv")
+#write_csv(mycensus_district_yearlong, "mycensus_district_yearlong.csv")
+#write_rds(mycensus_district_yearlong, "mycensus_district_yearlong.rds")
 ```
 
 # Misc
