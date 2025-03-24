@@ -1,0 +1,392 @@
+---
+title: "Malaysia Census 2020 by State"
+date: last-modified
+date-format: "dddd, DD/MM/YYYY"
+format: 
+  html:
+    theme: flatly
+    code-fold: true
+    code-copy: hover
+    code-overflow: wrap
+    code-tools: true
+    df-print: paged
+    default-image-extension: svg
+    embed-resources: true
+    page-layout: full
+    reference-location: margin
+    title-block-banner: true
+    title-block-style: default
+    fontsize: .9em
+    monofont: 'Fira Code'
+execute: 
+  echo: true
+  warning: true
+number-sections: true
+toc: true
+fig-dpi: 320
+dpi: 320
+---
+
+# Library
+
+```{r}
+#| label: setup
+
+options(scipen = 999)
+pacman::p_load(tidyverse, readxl, janitor)
+
+# Default parameter mapping
+param_type1 <- list(
+  "17" = "Pop_GenderTotal", "18" = "Pop_GenderMale", "19" = "Pop_GenderFemale",
+  "27" = "Pop_CitizenshipCitizen", "28" = "Pop_CitizenshipNon-citizen",
+  "34" = "AnnualPopGrowthRate_Average",
+  "38" = "Pop_EthnicMalay", "39" = "Pop_EthnicOtherBumi", "40" = "Pop_EthnicChinese",
+  "41" = "Pop_EthnicIndian", "42" = "Pop_EthnicOther",
+  "53" = "Pop_AgeGroup0014", "55" = "Pop_AgeGroup1564", "57" = "Pop_AgeGroup65++",
+  "85" = "Pop_MaritalNeverMarried", "86" = "Pop_MaritalMarried",
+  "87" = "Pop_MaritalWiddowed", "88" = "Pop_MaritalDivorcedSeparated",
+  "97" = "Pop_ReligionIslam", "98" = "Pop_ReligionChristian", 
+  "99" = "Pop_ReligionBuddha", "100" = "Pop_ReligionHindu", 
+  "101" = "Pop_ReligionOthers", "102" = "Pop_ReligionNoReligionUnknown",
+  "112" = "LandAreaKm2", "114" = "Pop_Density",
+  "117" = "Pop_StrataUrban", "118" = "Pop_StrataRural"
+)
+
+param_type2 <- list(
+  "17" = "Pop_GenderTotal", "18" = "Pop_GenderMale", "19" = "Pop_GenderFemale",
+  "27" = "Pop_CitizenshipCitizen", "28" = "Pop_CitizenshipNon-citizen",
+  "34" = "AnnualPopGrowthRate_Average",
+  "38" = "Pop_EthnicMalay", "39" = "Pop_EthnicOtherBumi", "40" = "Pop_EthnicChinese",
+  "41" = "Pop_EthnicIndian", "42" = "Pop_EthnicOther",
+  "53" = "Pop_AgeGroup0014", "55" = "Pop_AgeGroup1564", "57" = "Pop_AgeGroup65++",
+  "86" = "Pop_MaritalNeverMarried", "87" = "Pop_MaritalMarried",
+  "88" = "Pop_MaritalWiddowed", "89" = "Pop_MaritalDivorcedSeparated",
+  "98" = "Pop_ReligionIslam", "99" = "Pop_ReligionChristian", 
+  "100" = "Pop_ReligionBuddha", "101" = "Pop_ReligionHindu", 
+  "102" = "Pop_ReligionOthers", "103" = "Pop_ReligionNoReligionUnknown",
+  "113" = "LandAreaKm2", "115" = "Pop_Density",
+  "118" = "Pop_StrataUrban", "119" = "Pop_StrataRural"
+)
+
+param_type3 <- list(
+  "17" = "Pop_GenderTotal", "18" = "Pop_GenderMale", "19" = "Pop_GenderFemale",
+  "27" = "Pop_CitizenshipCitizen", "28" = "Pop_CitizenshipNon-citizen",
+  "34" = "AnnualPopGrowthRate_Average",
+  "38" = "Pop_EthnicMalay", "39" = "Pop_EthnicOtherBumi", "40" = "Pop_EthnicChinese",
+  "41" = "Pop_EthnicIndian", "42" = "Pop_EthnicOther",
+  "53" = "Pop_AgeGroup0014", "55" = "Pop_AgeGroup1564", "57" = "Pop_AgeGroup65++",
+  "84" = "Pop_MaritalNeverMarried", "85" = "Pop_MaritalMarried",
+  "86" = "Pop_MaritalWiddowed", "87" = "Pop_MaritalDivorcedSeparated",
+  "96" = "Pop_ReligionIslam", "97" = "Pop_ReligionChristian", 
+  "98" = "Pop_ReligionBuddha", "99" = "Pop_ReligionHindu", 
+  "100" = "Pop_ReligionOthers", "101" = "Pop_ReligionNoReligionUnknown",
+  "111" = "LandAreaKm2", "113" = "Pop_Density",
+  "116" = "Pop_StrataUrban", "117" = "Pop_StrataRural"
+)
+
+extract_stateinfo <- function(file,
+                              sheet = "3. STATE",
+                              range = "A4:G150",
+                              param_map = param_type1) {
+  if (!file.exists(file)) stop("Error: File does not exist - ", file)
+
+  # Extract state info from file path
+  path_parts <- str_split(file, "/")[[1]]
+  state_info <- path_parts[length(path_parts) - 1]  # e.g., "02 Kedah"
+
+  # Extract state code and state name
+  state_code <- as.integer(str_extract(state_info, "^\\d{2}"))
+  state_name <- str_remove(state_info, "^\\d{2} ")
+
+  # Read Excel file (all as character)
+  df <- tryCatch(
+    read_excel(file, sheet = sheet, range = range,
+               col_names = TRUE, col_types = "text") %>%
+      clean_names() %>%
+      mutate(across(where(is.character), str_trim)),
+    error = function(e) stop("Error: Unable to read sheet '", sheet,
+                             "' in file - ", file)
+  )
+
+  # Rename columns: Replace "x" with "census_"
+  colnames(df) <- str_replace_all(names(df), "^x(\\d+)$", "census_\\1")
+
+  # Add metadata
+  df <- df %>%
+    mutate(
+      state_code = state_code,
+      state_name = state_name,
+      parameter = map_chr(row_number(), ~param_map[[as.character(.x)]] %||% NA_character_)
+    ) %>%
+    relocate(all_of(c("state_code", "state_name", "parameter"))) %>%
+    filter(!is.na(parameter))
+
+  # Initialize or retrieve list_stateinfo
+  list_stateinfo <- if (exists("list_stateinfo", envir = .GlobalEnv)) {
+    get("list_stateinfo", envir = .GlobalEnv)
+  } else {
+    list()
+  }
+
+  # Store under list_stateinfo$<state_name>
+  list_stateinfo[[state_name]] <- list(
+    state_code = state_code,
+    censusdata = df
+  )
+
+  assign("list_stateinfo", list_stateinfo, envir = .GlobalEnv)
+
+  message("✅ Extracted data stored in: list_stateinfo$", state_name, "$censusdata")
+}
+
+```
+
+
+# Raw Data
+
+## Johor
+
+```{r}
+extract_stateinfo("../01 Johor/JOHOR JADUAL 1 HINGGA 16.xlsx", 
+                  sheet = "2. Johor")
+```
+
+
+```{r}
+list_stateinfo$Johor$censusdata
+```
+
+## Kedah
+
+```{r}
+extract_stateinfo("../02 Kedah/KEDAH JADUAL 1 HINGGA 16.xlsx", 
+                  sheet = "2. Kedah")
+```
+
+```{r}
+list_stateinfo$Kedah$censusdata
+```
+
+
+## Kelantan
+
+```{r}
+extract_stateinfo("../03 Kelantan/KELANTAN JADUAL 1 HINGGA 16.xlsx", 
+                  sheet = "2. Kelantan")
+```
+
+```{r}
+list_stateinfo$Kelantan$censusdata
+```
+
+## Melaka
+
+```{r}
+extract_stateinfo("../04 Melaka/MELAKA JADUAL 1 HINGGA 16.xlsx", 
+                  sheet = "2. Melaka")
+```
+
+```{r}
+list_stateinfo$Melaka$censusdata
+```
+
+
+## Negeri Sembilan
+
+```{r}
+extract_stateinfo("../05 Negeri Sembilan/NEGERI SEMBILAN JADUAL 1 HINGGA 16.xlsx", 
+                  sheet = "2. Negeri Sembilan")
+```
+
+```{r}
+list_stateinfo$`Negeri Sembilan`$censusdata
+```
+
+## Pahang
+
+```{r}
+extract_stateinfo("../06 Pahang/PAHANG JADUAL 1 HINGGA 16.xlsx", 
+                  sheet = "2. Pahang")
+```
+
+```{r}
+list_stateinfo$Pahang$censusdata
+```
+
+## Pulau Pinang
+
+```{r}
+extract_stateinfo("../07 Pulau Pinang/PULAU PINANG JADUAL 1 HINGGA 16.xlsx", 
+                  sheet = "2. Pulau Pinang")
+```
+
+```{r}
+list_stateinfo$`Pulau Pinang`$censusdata
+```
+
+## Perak
+
+```{r}
+extract_stateinfo("../08 Perak/PERAK JADUAL 1 HINGGA 16.xlsx", 
+                  sheet = "2. Perak", 
+                  param_map = param_type2)
+```
+
+```{r}
+list_stateinfo$Perak$censusdata
+```
+
+## Perlis
+
+```{r}
+extract_stateinfo("../09 Perlis/PERLIS JADUAL 1 HINGGA 16.xlsx", 
+                  sheet = "2. Perlis")
+```
+
+```{r}
+list_stateinfo$Perlis$censusdata
+```
+
+## Selangor
+
+```{r}
+extract_stateinfo("../10 Selangor/SELANGOR JADUAL 1 HINGGA 16.xlsx", 
+                  sheet = "2 Selangor")
+```
+
+```{r}
+list_stateinfo$Selangor$censusdata
+```
+
+## Terengganu
+
+```{r}
+extract_stateinfo("../11 Terengganu/TERENGGANU JADUAL 1 HINGGA 16.xlsx", 
+                  sheet = "2. Terengganu", 
+                  param_map = param_type3)
+```
+
+```{r}
+list_stateinfo$Terengganu$censusdata
+```
+
+## Sabah
+
+```{r}
+extract_stateinfo("../12 Sabah/SABAH JADUAL 1 HINGGA 16.xlsx", 
+                  sheet = "2. Sabah ")
+```
+
+```{r}
+list_stateinfo$Sabah$censusdata
+```
+
+## Sarawak
+
+```{r}
+extract_stateinfo("../13 Sarawak/SARAWAK JADUAL 1 HINGGA 16.xlsx", 
+                  sheet = "2. Sarawak", 
+                  param_map = param_type3)
+```
+
+```{r}
+list_stateinfo$Sarawak$censusdata
+```
+
+## Wilayah Persekutuan Kuala Lumpur
+
+```{r}
+extract_stateinfo("../14 WP Kuala Lumpur/W.P. KUALA LUMPUR JADUAL 1 HINGGA 16.xlsx", 
+                  sheet = "2. W.P. Kuala Lumpur")
+```
+
+```{r}
+list_stateinfo$`WP Kuala Lumpur`$censusdata
+```
+
+## Wilayah Persekutuan Labuan
+
+```{r}
+extract_stateinfo("../15 WP Labuan/W.P. LABUAN JADUAL 1 HINGGA 16.xlsx", 
+                  sheet = "2. W.P. Labuan")
+```
+
+```{r}
+list_stateinfo$`WP Labuan`$censusdata
+```
+
+
+## Wilayah Persekutuan Putrajaya 
+
+```{r}
+extract_stateinfo("../16 WP Putrajaya/W.P. PUTRAJAYA JADUAL 1 HINGGA 16.xlsx", 
+                  sheet = "2. W.P. Putrajaya")
+```
+
+```{r}
+list_stateinfo$`WP Putrajaya`$censusdata
+```
+
+## All
+
+```{r}
+mycensus_state_yearwide <- map_dfr(names(list_stateinfo), function(state) {
+  list_stateinfo[[state]]$censusdata %>%
+    mutate(state_name = state)
+}) %>%
+  select(-census_1)
+
+mycensus_state_yearwide
+```
+
+
+# Wrangle
+
+```{r}
+mycensus_state_yearlong <- mycensus_state_yearwide %>%
+  pivot_longer(cols = starts_with("census_"),
+               names_to = "census_year",
+               values_to = "value") %>%
+  mutate(
+    census_year = str_remove(census_year, "census_"),
+    census_year = as.integer(census_year)
+  ) %>%
+  pivot_wider(names_from = parameter, values_from = value) %>%
+  mutate(
+    across(.cols = c(Pop_GenderTotal:`Pop_CitizenshipNon-citizen`,
+                     Pop_EthnicMalay:Pop_ReligionNoReligionUnknown,
+                     Pop_StrataUrban, Pop_StrataRural),
+           .fns = ~ as.integer(.)),
+    across(.cols = c(AnnualPopGrowthRate_Average, LandAreaKm2, Pop_Density),
+           .fns = ~ as.numeric(.))
+  ) %>%
+  rename(Pop_Total = Pop_GenderTotal)
+
+
+mycensus_state_yearlong
+```
+
+# Misc
+
+```{r}
+mycensus_state_yearlong %>% 
+  group_by(census_year) %>% 
+  summarise(total_pop = sum(Pop_Total, na.rm = T), 
+            .groups = "drop")
+```
+
+```{r}
+mycensus_state_yearlong %>% 
+  group_by(census_year) %>% 
+  summarise(malay_pop = sum(Pop_EthnicMalay, na.rm = T), 
+            .groups = "drop")
+```
+
+
+```{r}
+mycensus_state_yearlong %>% 
+  group_by(census_year) %>% 
+  summarise(land_area = sum(LandAreaKm2, na.rm = T), 
+            .groups = "drop")
+```
+
