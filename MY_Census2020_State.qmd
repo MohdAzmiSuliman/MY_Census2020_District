@@ -337,6 +337,9 @@ mycensus_state_yearwide <- map_dfr(names(list_stateinfo), function(state) {
   select(-census_1)
 
 mycensus_state_yearwide
+
+#write_csv(mycensus_state_yearwide, "mycensus_state_yearwide.csv")
+#write_rds(mycensus_state_yearwide, "mycensus_state_yearwide.rds")
 ```
 
 
@@ -364,6 +367,9 @@ mycensus_state_yearlong <- mycensus_state_yearwide %>%
 
 
 mycensus_state_yearlong
+
+#write_csv(mycensus_state_yearlong, "mycensus_state_yearlong.csv")
+#write_rds(mycensus_state_yearlong, "mycensus_state_yearlong.rds")
 ```
 
 # Misc
